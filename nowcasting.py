@@ -129,14 +129,14 @@ print()
 print('    Istanti usati per il predict:')
 istanti_usati_per_predict = list(pd.to_datetime(ds_pred.time.values))[::-1]
 print(f"    {istanti_usati_per_predict[0]} UTC - {istanti_usati_per_predict[0].tz_localize('UTC').tz_convert('Europe/Rome').tz_localize(None)} LOC")
-print("    . . . . . . . . . .")
+print("    ...")
 print(f"    {istanti_usati_per_predict[-1]} UTC - {istanti_usati_per_predict[-1].tz_localize('UTC').tz_convert('Europe/Rome').tz_localize(None)} LOC")
 
 tempi_previsti = pd.date_range(pd.to_datetime(ds_pred.time.values[-1]) + pd.Timedelta(minutes=5), freq='5min', periods=int(12 * ore_previsione))
 print('\n    Tempi previsti:')
-print(f"    {tempi_previsti[-1]} UTC - {tempi_previsti[-1].tz_localize('UTC').tz_convert('Europe/Rome').tz_localize(None)} LOC")
-print("    . . . . . . . . . .")
 print(f"    {tempi_previsti[0]} UTC - {tempi_previsti[0].tz_localize('UTC').tz_convert('Europe/Rome').tz_localize(None)} LOC")
+print("    ...")
+print(f"    {tempi_previsti[-1]} UTC - {tempi_previsti[-1].tz_localize('UTC').tz_convert('Europe/Rome').tz_localize(None)} LOC")
 print()
 
 """ La logica che c'è dietro il predict è questa
@@ -145,6 +145,8 @@ print()
     
     Il predict prevede {ore_previsione} ore, dove il primo istante previsto sarà il 2026-05-06 15:15:00 + 5min
     Es UTC. 2026-05-06 15:20:00, 2026-05-06 15:25:00 ... che si troveranno nella cartella 2026/05/06/1515
+    
+    Possiamo dire che 2026/05/06/1515 è la cartella col nome dell'analisi
 
 """
 
@@ -154,11 +156,17 @@ file_forecast = f'forecasts_n{numero_membri}_tp{ore_previsione}_to{ore_osservato
 if os.path.exists(f'{cartella_plot}/{file_forecast}'):
     print('    Trovato file del forecast')
     forecasts = pickle.load(open(f'{cartella_plot}/{file_forecast}', 'rb'))
+    tempo_file_forecast = os.path.getmtime(f'{cartella_plot}/{file_forecast}')
+
+    if time.time() - tempo_file_forecast > 6 * 60 * 60:
+        print("Il file è più vecchio di 6 ore. Lo elimino e genero le nuove immagini con gli osservati.")
+        os.system(f'rm {cartella_plot}/{file_forecast}')
+
 else:
     print('    Faccio il forecast...')
     t = time.time()
     forecasts = modello.predict(ds_pred.RR, forecast_steps=int(12 * ore_previsione), ensemble_size=numero_membri)
-    f_printa_tempo_trascorso(t, time.time(), 'Forecast in')
+    f_printa_tempo_trascorso(t, time.time(), '    Forecast in')
     pickle.dump(forecasts, open(f'{cartella_plot}/{file_forecast}', 'wb'))
 
 print('    Calcolo media, perc80 e massimo...')
