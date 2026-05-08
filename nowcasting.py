@@ -20,14 +20,15 @@ os.chdir('/media/daniele/Daniele2TB/repo/Ens-Nowcasting_radar_FBK/irene')
 from irene.convgru_ensemble import RadarLightningModel
 os.chdir('/media/daniele/Daniele2TB/repo/Ens-Nowcasting_radar_FBK')
 
+
 def f_printa_tempo_trascorso(t_inizio, t_fine, nota=False):
     """Printa il tempo trascorso."""
     elapsed_tempo = timedelta(seconds=t_fine - t_inizio)
 
     giorni = f'{elapsed_tempo.days:01}'
-    ore = f'{elapsed_tempo.seconds//3600:02}'
-    minuti = f'{elapsed_tempo.seconds//60%60:02}'
-    secondi = f'{elapsed_tempo.seconds%60:02}'
+    ore = f'{elapsed_tempo.seconds // 3600:02}'
+    minuti = f'{elapsed_tempo.seconds // 60 % 60:02}'
+    secondi = f'{elapsed_tempo.seconds % 60:02}'
     millisecondi = elapsed_tempo.microseconds / 1000
 
     msg = f'{int(secondi)}.{int(millisecondi)} sec'
@@ -70,7 +71,6 @@ states = cfeature.NaturalEarthFeature(
 )
 
 # TODO Aggiungi il bottone "Ultima previsione"
-# TODO Quando genero anche gli osservati devo eliminare i file .pkl perché pesano troppo
 
 # FATTO Riduci la dimensione in kb delle immagini
 # FATTO Aggiungi "sono le ore UTC" nell'html
@@ -81,7 +81,7 @@ states = cfeature.NaturalEarthFeature(
 ### Posso lanciare lo script anche passandogli una data: es. "2026-01-01 00:00:00"
 
 modello = RadarLightningModel.from_pretrained("it4lia/irene")
-coordinate = (7.2, 10.5, 43.1, 45.4)
+coordinate = (7.2, 10.3, 43.4, 45.5)
 numero_membri, ore_previsione, ore_osservato_per_predict = 10, 2, 1
 
 #################
@@ -100,12 +100,12 @@ data_inizio_previsione_LOC = data_inizio_previsione_UTC.tz_convert('Europe/Rome'
 ds_pred = xr.open_dataset(dataset_url, engine="zarr").sel(
     time=slice(data_inizio_previsione_UTC.tz_convert(None) - pd.Timedelta(hours=ore_osservato_per_predict),
                data_inizio_previsione_UTC.tz_convert(None))
-    )
+)
 
 ds_obs = xr.open_dataset(dataset_url, engine="zarr").sel(
     time=slice(data_inizio_previsione_UTC.tz_convert(None),
                data_inizio_previsione_UTC.tz_convert(None) + pd.Timedelta(hours=ore_previsione))
-    )
+)
 
 cartella_plot = f"plot/{data_inizio_previsione_UTC.strftime('%Y/%m/%d/%H%M')}"
 os.makedirs(cartella_plot, exist_ok=True)
@@ -120,10 +120,10 @@ print('Configurazione')
 print(f"    Ora UTC: {data_inizio_previsione_UTC}")
 print(f"    Ora LOC: {data_inizio_previsione_LOC}")
 print()
-print(f'    {numero_membri = }')
-print(f'    {ore_previsione = }')
-print(f'    {ore_osservato_per_predict = }')
-print(f'    {cartella_plot = }')
+print(f'    {numero_membri=}')
+print(f'    {ore_previsione=}')
+print(f'    {ore_osservato_per_predict=}')
+print(f'    {cartella_plot=}')
 print()
 
 print('    Istanti usati per il predict:')
@@ -159,8 +159,11 @@ if os.path.exists(f'{cartella_plot}/{file_forecast}'):
     tempo_file_forecast = os.path.getmtime(f'{cartella_plot}/{file_forecast}')
 
     if time.time() - tempo_file_forecast > 6 * 60 * 60:
-        print("Il file è più vecchio di 6 ore. Lo elimino e genero le nuove immagini con gli osservati.")
-        os.system(f'rm {cartella_plot}/{file_forecast}')
+        print("    Il file è più vecchio di 6 ore. Lo elimino e genero le nuove immagini con gli osservati.")
+        # os.system(f'rm {cartella_plot}/{file_forecast}')
+        
+        # TODO Quando genero anche gli osservati devo eliminare i file .pkl perché pesano troppo
+        # Devo pensare a come far partire lo stesso script ma 6 ore dopo
 
 else:
     print('    Faccio il forecast...')
@@ -180,7 +183,7 @@ print('\n    Stampo le previsioni...')
 dict_comuni = {'levels': livelli, 'extend': 'both', 'cmap': cmap, 'norm': norm, 'zorder': -1}
 
 for i, tempo_UTC in enumerate(tempi_previsti):
-    fig, axs = plt.subplots(2, 2, figsize=(9, 7), subplot_kw={'projection': ccrs.PlateCarree()}, gridspec_kw={ 'wspace': 0.01, 'hspace': 0.1})
+    fig, axs = plt.subplots(2, 2, figsize=(9, 7), subplot_kw={'projection': ccrs.PlateCarree()}, gridspec_kw={'wspace': 0.01, 'hspace': 0.1})
     
     tempo_LOCAL = tempo_UTC.tz_localize('UTC').tz_convert('Europe/Rome')
     
@@ -205,7 +208,6 @@ for i, tempo_UTC in enumerate(tempi_previsti):
         if titolo == f"Media su {numero_membri} membri":
             ax.set_title(titolo_LOC, loc='right', fontsize=9)
             
-    
     fig.subplots_adjust(
         left=0.01,
         right=0.99,
@@ -254,5 +256,5 @@ for i, tempo_UTC in enumerate(tempi_previsti):
     
 che_ore_sono_LOC = pd.Timestamp.today().floor('s')
 che_ore_sono_UTC = che_ore_sono_LOC.tz_localize('Europe/Rome').tz_convert('UTC').tz_localize(None)
-print(f"Fatto. Sono le {che_ore_sono_UTC} UTC, {che_ore_sono_LOC} locali")
+print(f"\nFatto. Sono le {che_ore_sono_UTC} UTC, {che_ore_sono_LOC} locali")
 print('-----------------------------------------------------------------------\n')
