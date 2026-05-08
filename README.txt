@@ -16,7 +16,7 @@ La repository si trova in https://it4lia-aifactory.eu/it/repository/ cliccando s
     Può essere lanciato da solo passandogli una data UTC (es. python3 nowcasting.py "2020-01-01 00:00:00")
     Messo in crontab -e gira da solo. Ha un delay di 10 minuti rispetto al tempo attuale perché se l'ultimo istante non ha pioggia non verrà prevista mai pioggia.
     In crontab viene fatto dirare alle 00, 15, 30, 45 di ogni ora.
-    La cartella, per esempio, 2020/10/07/2045 conterrà le previsioni a partire dalle 20:45, cioè il primo istante veramente previsto.
+    La cartella, per esempio, 2020/10/07/2045 conterrà le previsioni a partire dalle 20:45 + 5min, cioè il primo istante veramente previsto.
 
 3. In crontab -e:
 */15 * * * * ~/Scrivania/daniele/ambiente_daniele/dani/bin/python -u ~/Scrivania/FBK_nowcasting_ens/nowcasting.py >> ~/Scrivania/FBK_nowcasting_ens/irene/log_crontab.log 2>&1

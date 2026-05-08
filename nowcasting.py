@@ -92,7 +92,9 @@ if data_str:
 else:
     data_inizio_previsione_UTC = pd.Timestamp.today().tz_localize('Europe/Rome').tz_convert('UTC').floor('min').tz_convert(None)
 
-data_inizio_previsione_UTC = (data_inizio_previsione_UTC - pd.Timedelta(minutes=10)).tz_localize('UTC')
+# data_inizio_previsione_UTC = pd.to_datetime('2026-05-06 15:30')
+
+data_inizio_previsione_UTC = (data_inizio_previsione_UTC - pd.Timedelta(minutes=15)).tz_localize('UTC')
 data_inizio_previsione_LOC = data_inizio_previsione_UTC.tz_convert('Europe/Rome')
 
 ds_pred = xr.open_dataset(dataset_url, engine="zarr").sel(
@@ -105,9 +107,9 @@ ds_obs = xr.open_dataset(dataset_url, engine="zarr").sel(
                data_inizio_previsione_UTC.tz_convert(None) + pd.Timedelta(hours=ore_previsione))
     )
 
-cartella_plot = f"plot/{(data_inizio_previsione_UTC + pd.Timedelta(minutes=5)).strftime('%Y/%m/%d/%H%M')}"
+cartella_plot = f"plot/{data_inizio_previsione_UTC.strftime('%Y/%m/%d/%H%M')}"
 os.makedirs(cartella_plot, exist_ok=True)
-sss
+
 #################
 
 che_ore_sono_LOC = pd.Timestamp.today().floor('s')
@@ -126,73 +128,27 @@ print()
 
 print('    Istanti usati per il predict:')
 istanti_usati_per_predict = list(pd.to_datetime(ds_pred.time.values))[::-1]
-for i in istanti_usati_per_predict:
-    print(f"    {i} UTC - {i.tz_localize('UTC').tz_convert('Europe/Rome').tz_localize(None)} LOC")
+print(f"    {istanti_usati_per_predict[0]} UTC - {istanti_usati_per_predict[0].tz_localize('UTC').tz_convert('Europe/Rome').tz_localize(None)} LOC")
+print("    . . . . . . . . . .")
+print(f"    {istanti_usati_per_predict[-1]} UTC - {istanti_usati_per_predict[-1].tz_localize('UTC').tz_convert('Europe/Rome').tz_localize(None)} LOC")
 
-# Metto un ritardo di 10 minuti e faccio il predict ogni 15 minuti (00, 15, 30, 45)
+tempi_previsti = pd.date_range(pd.to_datetime(ds_pred.time.values[-1]) + pd.Timedelta(minutes=5), freq='5min', periods=int(12 * ore_previsione))
+print('\n    Tempi previsti:')
+print(f"    {tempi_previsti[-1]} UTC - {tempi_previsti[-1].tz_localize('UTC').tz_convert('Europe/Rome').tz_localize(None)} LOC")
+print("    . . . . . . . . . .")
+print(f"    {tempi_previsti[0]} UTC - {tempi_previsti[0].tz_localize('UTC').tz_convert('Europe/Rome').tz_localize(None)} LOC")
+print()
+
+""" La logica che c'è dietro il predict è questa
+    Gli passo gli istanti dentro ds_pred.
+    Es UTC. 2026-05-06 15:15:00, 2026-05-06 15:10:00, ... 2026-05-06 14:15:00. Gli ho passato in questo caso 1 ora
+    
+    Il predict prevede {ore_previsione} ore, dove il primo istante previsto sarà il 2026-05-06 15:15:00 + 5min
+    Es UTC. 2026-05-06 15:20:00, 2026-05-06 15:25:00 ... che si troveranno nella cartella 2026/05/06/1515
+
+"""
 
 # %%
-"""
-# Osservato un'ora precedente. Inutile, lo cancellerò.
-for tempo_UTC in ds.time:
-    fig, ax = plt.subplots(figsize=(7, 9), subplot_kw={'projection': ccrs.PlateCarree()})
-
-    cf = ax.contourf(
-        ds.sel(time=tempo_UTC).RR.lon,
-        ds.sel(time=tempo_UTC).RR.lat,
-        ds.sel(time=tempo_UTC).RR,
-        levels=livelli,
-        cmap=cmap,
-        norm=norm,
-        extend='both',
-        transform=ccrs.PlateCarree(),
-    )
-
-    ax.contour(
-        ds.sel(time=tempo_UTC).RR.lon,
-        ds.sel(time=tempo_UTC).RR.lat,
-        ds.sel(time=tempo_UTC).RR,
-        levels=livelli,
-        colors='black',
-        linewidths=0.3,
-        transform=ccrs.PlateCarree(),
-    )
-    
-    ax.set_extent(coordinate)
-    
-    ax.coastlines()
-    ax.add_feature(cfeature.BORDERS)
-    ax.add_feature(states, lw=0.2)
-
-    cbar = fig.colorbar(
-        cf,
-        ax=ax,
-        ticks=livelli,
-        orientation='horizontal',
-        pad=0.01,      # distanza dalla mappa
-        fraction=0.02, # altezza colorbar
-        aspect=35      # lunghezza
-    )
-    cbar.set_ticklabels(labels, fontsize=8)
-    
-    tempo_LOCAL = pd.to_datetime(tempo_UTC.values).tz_localize('UTC').tz_convert('Europe/Rome')
-    offset = int(tempo_LOCAL.utcoffset().total_seconds() / 3600)
-    titolo_sinistro = f"Osservato: {tempo_LOCAL.strftime('%d %B %Y %H:%M') + f' [+{offset}]'}"
-    titolo_destro = f"{ds.RR.attrs['long_name']} [mm/h]"
-    print('*', titolo_sinistro)
-    
-    ax.set_title(titolo_sinistro, loc='left', fontsize=10)
-    ax.set_title(titolo_destro, loc='right', fontsize=10)
-    
-    plt.tight_layout()
-    # plt.savefig(f"{cartella_plot}/obs_{pd.to_datetime(tempo_UTC.values).strftime('%Y-%m-%d_%H%M')}.png", dpi=150, format='png', bbox_inches='tight')
-
-    plt.show()
-    plt.close()
-    # ss
-# """
-
-print()
 file_forecast = f'forecasts_n{numero_membri}_tp{ore_previsione}_to{ore_osservato_per_predict}.pkl'
 
 if os.path.exists(f'{cartella_plot}/{file_forecast}'):
@@ -209,11 +165,6 @@ print('    Calcolo media, perc80 e massimo...')
 media = np.mean(forecasts, axis=0)
 perc80 = np.quantile(forecasts, axis=0, q=0.8)
 massimo = np.max(forecasts, axis=0) # worst case
-
-tempi_previsti = pd.date_range(pd.to_datetime(ds_pred.time.values[-1]) + pd.Timedelta(minutes=5), freq='5min', periods=int(12 * ore_previsione))
-print('    Tempi previsti:')
-for i in tempi_previsti:
-    print(f"    {i} UTC - {i.tz_localize('UTC').tz_convert('Europe/Rome').tz_localize(None)} LOC")
 
 # %%
 print('\n    Stampo le previsioni...')
