@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Visualizzatore immagini</title>
+
+    <style>
+        html,
+        body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: Arial;
+            background: #f4f4f4;
+        }
+
+        /* LAYOUT PRINCIPALE */
+        .container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+        }
+
+        /* SIDEBAR SINISTRA */
+        .controls-panel {
+            width: 280px;
+            min-width: 280px;
+            padding: 10px;
+            box-sizing: border-box;
+            background: white;
+            border-right: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        h2 {
+            font-size: 20px;
+            text-align: center;
+            margin: 0 0 10px 0;
+        }
+
+        /* INPUT UI */
+        button,
+        select,
+        input {
+            padding: 6px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* LABEL UTC */
+        .utc-label {
+            text-align: center;
+            font-size: 16px;
+            display: block;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            color: #444;
+        }
+
+        /* AREA IMMAGINE */
+        .image-panel {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background: #f4f4f4;
+        }
+
+        .image-panel img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transform: scaleX(1.15);
+            transform-origin: center;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <!-- SINISTRA -->
+        <div class="controls-panel">
+
+            <h2>Ensemble Nowcasting Radar ARPAL</h2>
+
+            <form id="mainForm" method="POST">
+
+                <!-- ORA UTC -->
+                <span class="utc-label" id="utcClock">
+                    Sono le --:-- UTC
+                </span>
+
+                <input type="date" name="date" value="{{ data }}" required>
+
+                <select name="hour">
+                    {% for h in range(24) %}
+                    <option value="{{'%02d' % h}}" {% if ora=='%02d' % h %}selected{% endif %}>
+                        {{'%02d' % h}}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <select name="minute">
+                    {% for m in range(0,60,15) %}
+                    <option value="{{ '%02d' % m }}" {% if minuto=='%02d' % m %}selected{% endif %}>
+                        {{ '%02d' % m }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <input type="hidden" name="indice" value="{{ indice }}">
+
+
+                <button type="submit" name="action" value="load">
+                    Carica dalla prima
+                </button>
+
+                <button type="submit" name="action" value="latest">
+                    Ultimo Run
+                </button>
+
+            </form>
+
+        </div>
+
+        <!-- DESTRA -->
+        <div class="image-panel">
+
+            {% if immagine_corrente %}
+            <img id="mainImg" src="{{ immagine_corrente }}" data-index="{{ indice }}">
+            {% else %}
+            <p>Nessuna immagine trovata</p>
+            {% endif %}
+
+        </div>
+
+    </div>
+
+    <script>
+
+        /* =========================
+           ORA UTC
+        ========================= */
+        function aggiornaOraUTC() {
+
+            const now = new Date();
+
+            const ore = String(now.getUTCHours()).padStart(2, '0');
+            const minuti = String(now.getUTCMinutes()).padStart(2, '0');
+
+            document.getElementById("utcClock").textContent =
+                `Sono le ${ore}:${minuti} UTC`;
+        }
+
+        aggiornaOraUTC();
+
+        setInterval(aggiornaOraUTC, 1000);
+
+        /* =========================
+           IMMAGINI
+        ========================= */
+        const imageList = {{immagini | tojson | safe }};
+        const maxIndex = imageList.length - 1;
+
+        const img = document.getElementById("mainImg");
+
+        let cache = new Map();
+
+        /* =========================
+           PRELOAD CON CACHE
+        ========================= */
+        function preload(src) {
+
+            if (!src || cache.has(src)) return;
+
+            const im = new Image();
+            im.src = src;
+
+            cache.set(src, im);
+        }
+
+        /* =========================
+           PRELOAD BACKGROUND (NO LAG)
+        ========================= */
+        function preloadAllIdle() {
+
+            let i = 0;
+
+            function step() {
+
+                if (i >= imageList.length) return;
+
+                preload(imageList[i]);
+
+                i++;
+
+                if (window.requestIdleCallback) {
+                    requestIdleCallback(step, {timeout: 200});
+                } else {
+                    setTimeout(step, 10);
+                }
+            }
+
+            step();
+        }
+
+        preloadAllIdle();
+
+        /* =========================
+           KEYBOARD CONTROL
+        ========================= */
+        document.addEventListener("keydown", function (event) {
+
+            /* ENTER = CARICA DALLA PRIMA */
+            if (event.key === "Enter") {
+
+                event.preventDefault();
+
+                const form = document.getElementById("mainForm");
+
+                if (!form) return;
+
+                const inputIndice =
+                    form.querySelector('input[name="indice"]');
+
+                if (inputIndice) inputIndice.value = 0;
+
+                form.submit();
+
+                return;
+            }
+
+            /* NAVIGAZIONE */
+            let i = parseInt(
+                img.dataset.index || "{{ indice }}"
+            );
+
+            if (event.key === "ArrowRight") {
+
+                i++;
+
+            } else if (event.key === "ArrowLeft") {
+
+                i--;
+
+            } else {
+
+                return;
+            }
+
+            if (i < 0) i = 0;
+            if (i > maxIndex) i = maxIndex;
+
+            const src = imageList[i];
+
+            /* CACHE HIT → istantaneo */
+            if (cache.has(src)) {
+                img.src = src;
+            } else {
+                img.src = src;
+                preload(src);
+            }
+
+            img.dataset.index = i;
+        });
+
+    </script>
+
+</body>
+
+</html>
