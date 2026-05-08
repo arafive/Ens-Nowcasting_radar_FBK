@@ -2,7 +2,7 @@
 
 __version__ = "0.1.0"
 
-from convgru_ensemble.lightning_model import RadarLightningModel
-from convgru_ensemble.model import EncoderDecoder
+from irene.convgru_ensemble.lightning_model import RadarLightningModel
+from irene.convgru_ensemble.model import EncoderDecoder
 
 __all__ = ["EncoderDecoder", "RadarLightningModel"]

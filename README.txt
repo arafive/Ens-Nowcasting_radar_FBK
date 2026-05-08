@@ -18,6 +18,9 @@ La repository si trova in https://it4lia-aifactory.eu/it/repository/ cliccando s
     In crontab viene fatto dirare alle 00, 15, 30, 45 di ogni ora.
     La cartella, per esempio, 2020/10/07/2045 conterrà le previsioni a partire dalle 20:45, cioè il primo istante veramente previsto.
 
+3. In crontab -e:
+*/15 * * * * ~/Scrivania/daniele/ambiente_daniele/dani/bin/python -u ~/Scrivania/FBK_nowcasting_ens/nowcasting.py >> ~/Scrivania/FBK_nowcasting_ens/irene/log_crontab.log 2>&1
+
 Ci sono dei TODO da fare scritti dentro nowcasting.py
 
 ########### parte web

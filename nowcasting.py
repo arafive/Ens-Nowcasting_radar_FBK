@@ -2,7 +2,6 @@
 import sys
 import pickle
 import os
-os.chdir('/media/daniele/Daniele2TB/repo/Ens-Nowcasting_radar_FBK/irene')
 
 import locale
 locale.setlocale(locale.LC_TIME, 'it_IT.UTF-8')
@@ -17,7 +16,8 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 from datetime import timedelta
-from convgru_ensemble import RadarLightningModel
+os.chdir('/media/daniele/Daniele2TB/repo/Ens-Nowcasting_radar_FBK/irene')
+from irene.convgru_ensemble import RadarLightningModel
 os.chdir('/media/daniele/Daniele2TB/repo/Ens-Nowcasting_radar_FBK')
 
 def f_printa_tempo_trascorso(t_inizio, t_fine, nota=False):
@@ -107,7 +107,7 @@ ds_obs = xr.open_dataset(dataset_url, engine="zarr").sel(
 
 cartella_plot = f"plot/{(data_inizio_previsione_UTC + pd.Timedelta(minutes=5)).strftime('%Y/%m/%d/%H%M')}"
 os.makedirs(cartella_plot, exist_ok=True)
-
+sss
 #################
 
 che_ore_sono_LOC = pd.Timestamp.today().floor('s')
@@ -290,7 +290,7 @@ for i, tempo_UTC in enumerate(tempi_previsti):
     comando = f'magick {cartella_plot}/{nome_plot} -strip -colors 128 {cartella_plot}/{nome_plot}'
     os.system(comando)
     
-    plt.show()
+    # plt.show()
     plt.close()
     
 che_ore_sono_LOC = pd.Timestamp.today().floor('s')
