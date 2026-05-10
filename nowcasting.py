@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 from datetime import timedelta
-
+from concurrent.futures import ProcessPoolExecutor
 
 def f_printa_tempo_trascorso(t_inizio, t_fine, nota=False):
     """Printa il tempo trascorso."""
@@ -82,12 +82,10 @@ dict_proiezione = {
 ### CONFIGURAZIONE
 ### Posso lanciare lo script anche passandogli una data: es. "2026-01-01 00:00:00"
 
-# modello = RadarLightningModel.from_pretrained("it4lia/irene")
-# pickle.dump(modello, open('./modello.pkl', 'wb'))
 modello = pickle.load(open('./modello.pkl', 'rb'))
 
 coordinate = (6.7, 10.4, 43.5, 45.1)
-nome_proiezione = 'Orthographic'
+nome_proiezione = 'Mercator'
 numero_membri, ore_previsione, ore_osservato_per_predict = 10, 2, 1
 
 #################
@@ -98,7 +96,7 @@ if data_str:
 else:
     data_inizio_previsione_UTC = pd.Timestamp.today().tz_localize('Europe/Rome').tz_convert('UTC').floor('min').tz_convert(None)
 
-# data_inizio_previsione_UTC = pd.to_datetime("2026-05-10 10:00:00")
+data_inizio_previsione_UTC = pd.to_datetime("2026-05-10 10:00:00")
 
 data_inizio_previsione_UTC = (data_inizio_previsione_UTC - pd.Timedelta(minutes=15)).tz_localize('UTC')
 data_inizio_previsione_LOC = data_inizio_previsione_UTC.tz_convert('Europe/Rome')
@@ -115,6 +113,12 @@ ds_obs = xr.open_dataset(dataset_url, engine="zarr").sel(
 
 cartella_plot = f"plot/{data_inizio_previsione_UTC.strftime('%Y/%m/%d/%H%M')}"
 os.makedirs(cartella_plot, exist_ok=True)
+
+ds_proj = ccrs.TransverseMercator(
+        central_longitude=ds_pred.crs.attrs['longitude_of_central_meridian'],
+        central_latitude=ds_pred.crs.attrs['latitude_of_projection_origin'],
+        scale_factor=ds_pred.crs.attrs['scale_factor_at_central_meridian']
+        )
 
 #################
 
@@ -187,14 +191,16 @@ massimo = np.max(forecasts, axis=0) # worst case
 # %%
 print('\n    Stampo le previsioni...')
 
-dict_comuni = {'levels': livelli, 'extend': 'both', 'cmap': cmap, 'norm': norm, 'zorder': -1}
-
-for i, tempo_UTC in enumerate(tempi_previsti):
+def f_crea_plot(args):
+    
+    tempo_UTC, args_ds_obs, args_media, args_perc80, args_massimo = args
+    
+    dict_comuni = {'levels': livelli, 'extend': 'both', 'cmap': cmap, 'norm': norm, 'zorder': -1}
     fig, axs = plt.subplots(2, 2, figsize=(9, 7), subplot_kw={'projection': dict_proiezione[nome_proiezione]}, gridspec_kw={'wspace': 0.01, 'hspace': 0.1})
     
     tempo_LOCAL = tempo_UTC.tz_localize('UTC').tz_convert('Europe/Rome')
     
-    datasets = [ds_obs.sel(time=tempo_UTC).RR, media[i, ...], perc80[i, ...], massimo[i, ...]]
+    datasets = [args_ds_obs.RR, args_media, args_perc80, args_massimo]
     titoli = ["Osservato", f"Media su {numero_membri} membri", "80° percentile", "Massimo"]
     titolo_UTC = f"Previsto: {tempo_UTC.strftime('%d %B %Y %H:%M')} UTC"
     titolo_LOC = f"Previsto: {tempo_LOCAL.strftime('%d %B %Y %H:%M')} locale"
@@ -202,9 +208,9 @@ for i, tempo_UTC in enumerate(tempi_previsti):
     cf = None
     
     for ax, data, titolo in zip(axs.flat, datasets, titoli):
-        cf = ax.contourf(ds_pred.lon, ds_pred.lat, data, **dict_comuni)
+        cf = ax.contourf(ds_pred.x, ds_pred.y, data, transform=ds_proj, **dict_comuni)
+        ax.contour(ds_pred.x, ds_pred.y, data, transform=ds_proj, levels=livelli, colors='black', linewidths=0.2)
     
-        ax.contour(ds_pred.lon, ds_pred.lat, data, levels=livelli, colors='black', linewidths=0.2)
         ax.set_extent(coordinate, crs=ccrs.PlateCarree())
         ax.coastlines(linewidth=0.5)
         ax.add_feature(cfeature.BORDERS, linewidth=0.4)
@@ -215,53 +221,41 @@ for i, tempo_UTC in enumerate(tempi_previsti):
         if titolo == f"Media su {numero_membri} membri":
             ax.set_title(titolo_LOC, loc='right', fontsize=9)
             
-    fig.subplots_adjust(
-        left=0.01,
-        right=0.99,
-        bottom=0.06,
-        top=0.90,
-        wspace=0.01,
-        hspace=0.01
-    )
+    fig.subplots_adjust(left=0.01, right=0.99, bottom=0.06, top=0.90, wspace=0.01, hspace=0.01)
     
-    cbar = fig.colorbar(
-        cf,
-        ax=axs.ravel().tolist(),
-        orientation='horizontal',
-        ticks=livelli,
-        pad=0.01,
-        fraction=0.025,
-        aspect=50
-    )
+    cbar = fig.colorbar(cf, ax=axs.ravel().tolist(), orientation='horizontal', ticks=livelli, pad=0.01, fraction=0.025, aspect=50)
     
     cbar.set_ticklabels(labels)
     cbar.ax.tick_params(labelsize=8)
-    
-    cbar.ax.text(
-        1.03, -1,
-        "mm/h",
-        transform=cbar.ax.transAxes,
-        va='center',
-        ha='left',
-        fontsize=9
-    )
+    cbar.ax.text(1.03, -1, "mm/h",transform=cbar.ax.transAxes, va='center', ha='left', fontsize=9)
     
     nome_plot = f"prev_{tempo_UTC.strftime('%Y-%m-%d_%H%M')}.png"
-    plt.savefig(
-        f"{cartella_plot}/{nome_plot}",
-        dpi=200,
-        bbox_inches='tight',
-        pad_inches=0.02
-    )
+    plt.savefig(f"{cartella_plot}/{nome_plot}", dpi=200, bbox_inches='tight', pad_inches=0.02    )
     
     ### Riduco la dimensione in kB
     comando = f'magick {cartella_plot}/{nome_plot} -strip -colors 128 {cartella_plot}/{nome_plot}'
     os.system(comando)
     
-    plt.show()
-    plt.close()
-    # sss
+    # plt.show()
+    plt.close(fig)
     
+    print(nome_plot)
+    
+    return nome_plot
+
+# %%
+
+lista_ds_obs = [ds_obs.sel(time=x) for x in tempi_previsti]
+lista_media = [media[x, ...] for x in range(len(tempi_previsti))]
+lista_perc80 = [perc80[x, ...] for x in range(len(tempi_previsti))]
+lista_massimo = [massimo[x, ...] for x in range(len(tempi_previsti))]
+
+with ProcessPoolExecutor(max_workers=4) as executor:
+
+    risultati = list(executor.map(f_crea_plot, zip(tempi_previsti, lista_ds_obs, lista_media, lista_perc80, lista_massimo)))
+
+print(risultati)
+
 che_ore_sono_LOC = pd.Timestamp.today().floor('s')
 che_ore_sono_UTC = che_ore_sono_LOC.tz_localize('Europe/Rome').tz_convert('UTC').tz_localize(None)
 print(f"\nFatto. Sono le {che_ore_sono_UTC} UTC, {che_ore_sono_LOC} locali")
