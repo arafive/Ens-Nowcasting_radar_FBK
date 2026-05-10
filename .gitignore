@@ -1,4 +1,4 @@
 plot/
 __pycache__/
 *.log
-
+modello.pkl
