@@ -26,7 +26,7 @@ Ci sono dei TODO da fare scritti dentro nowcasting.py
 ########### parte web
 
 Avviare flask in background:
-nohup flask run --host=0.0.0.0 --port=5001 > log_nowcasting.log 2>&1 &
+nohup flask run --host=0.0.0.0 --port=5001 > log_web.log 2>&1 &
 
 ip di questo computer ARPAL: 10.24.50.225 (trovato con >>> hostname -I)
 Link: http://10.24.50.225:5001

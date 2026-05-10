@@ -16,14 +16,12 @@
             background: #f4f4f4;
         }
 
-        /* LAYOUT PRINCIPALE */
         .container {
             width: 100vw;
             height: 100vh;
             display: flex;
         }
 
-        /* SIDEBAR SINISTRA */
         .controls-panel {
             width: 280px;
             min-width: 280px;
@@ -42,7 +40,6 @@
             margin: 0 0 10px 0;
         }
 
-        /* INPUT UI */
         button,
         select,
         input {
@@ -51,7 +48,6 @@
             box-sizing: border-box;
         }
 
-        /* LABEL UTC */
         .utc-label {
             text-align: center;
             font-size: 16px;
@@ -61,7 +57,6 @@
             color: #444;
         }
 
-        /* AREA IMMAGINE */
         .image-panel {
             flex: 1;
             display: flex;
@@ -75,7 +70,7 @@
             width: 100%;
             height: 100%;
             object-fit: contain;
-            transform: scaleX(1.05);
+            transform: scaleX(1.1);
             transform-origin: center;
         }
     </style>
@@ -86,33 +81,31 @@
 
     <div class="container">
 
-        <!-- SINISTRA -->
+        <!-- SIDEBAR -->
         <div class="controls-panel">
 
             <h2>Ensemble Nowcasting Radar ARPAL</h2>
 
+            {% set current_time = time %}
+            {% set ora = current_time.split(':')[0] %}
+            {% set minuto = current_time.split(':')[1] %}
+
             <form id="mainForm" method="POST">
 
-                <!-- ORA UTC -->
                 <span class="utc-label" id="utcClock">
                     Sono le --:-- UTC
                 </span>
 
                 <input type="date" name="date" value="{{ data }}" required>
 
-                <select name="hour">
+                <select name="time">
                     {% for h in range(24) %}
-                    <option value="{{'%02d' % h}}" {% if ora=='%02d' % h %}selected{% endif %}>
-                        {{'%02d' % h}}
+                    {% for m in range(0, 60, 15) %}
+                    {% set val = "%02d:%02d" % (h, m) %}
+                    <option value="{{ val }}" {% if val==time %}selected{% endif %}>
+                        {{ val }}
                     </option>
                     {% endfor %}
-                </select>
-
-                <select name="minute">
-                    {% for m in range(0,60,15) %}
-                    <option value="{{ '%02d' % m }}" {% if minuto=='%02d' % m %}selected{% endif %}>
-                        {{ '%02d' % m }}
-                    </option>
                     {% endfor %}
                 </select>
 
@@ -130,7 +123,7 @@
 
         </div>
 
-        <!-- DESTRA -->
+        <!-- IMAGE -->
         <div class="image-panel">
 
             {% if immagine_corrente %}
@@ -160,75 +153,49 @@
         }
 
         aggiornaOraUTC();
-
         setInterval(aggiornaOraUTC, 1000);
 
         /* =========================
            FORM BUTTONS
         ========================= */
         const form = document.getElementById("mainForm");
+        const dateInput = form.querySelector('input[name="date"]');
 
-        const dateInput =
-            form.querySelector('input[name="date"]');
-
-        const latestBtn =
-            form.querySelector('button[value="latest"]');
-
-        const loadBtn =
-            form.querySelector('button[value="load"]');
-
-        /* ULTIMO RUN → disabilita required */
-        latestBtn.addEventListener("click", function () {
-
+        form.querySelector('button[value="latest"]').addEventListener("click", function () {
             dateInput.removeAttribute("required");
         });
 
-        /* LOAD → riabilita required */
-        loadBtn.addEventListener("click", function () {
-
+        form.querySelector('button[value="load"]').addEventListener("click", function () {
             dateInput.setAttribute("required", "required");
         });
 
         /* =========================
            IMMAGINI
         ========================= */
-        const imageList = {{ immagini | tojson | safe }};
+        const imageList = {{immagini | tojson | safe }};
         const maxIndex = imageList.length - 1;
 
         const img = document.getElementById("mainImg");
 
         let cache = new Map();
 
-        /* =========================
-           PRELOAD CON CACHE
-        ========================= */
         function preload(src) {
-
             if (!src || cache.has(src)) return;
-
             const im = new Image();
             im.src = src;
-
             cache.set(src, im);
         }
 
-        /* =========================
-           PRELOAD BACKGROUND (NO LAG)
-        ========================= */
         function preloadAllIdle() {
-
             let i = 0;
 
             function step() {
-
                 if (i >= imageList.length) return;
-
                 preload(imageList[i]);
-
                 i++;
 
                 if (window.requestIdleCallback) {
-                    requestIdleCallback(step, { timeout: 200 });
+                    requestIdleCallback(step, {timeout: 200});
                 } else {
                     setTimeout(step, 10);
                 }
@@ -244,14 +211,9 @@
         ========================= */
         document.addEventListener("keydown", function (event) {
 
-            /* ENTER = CARICA DALLA PRIMA */
             if (event.key === "Enter") {
 
                 event.preventDefault();
-
-                const form = document.getElementById("mainForm");
-
-                if (!form) return;
 
                 const inputIndice =
                     form.querySelector('input[name="indice"]');
@@ -259,25 +221,16 @@
                 if (inputIndice) inputIndice.value = 0;
 
                 form.submit();
-
                 return;
             }
 
-            /* NAVIGAZIONE */
-            let i = parseInt(
-                img.dataset.index || "{{ indice }}"
-            );
+            let i = parseInt(img.dataset.index || "{{ indice }}");
 
             if (event.key === "ArrowRight") {
-
                 i++;
-
             } else if (event.key === "ArrowLeft") {
-
                 i--;
-
             } else {
-
                 return;
             }
 
@@ -286,7 +239,6 @@
 
             const src = imageList[i];
 
-            /* CACHE HIT → istantaneo */
             if (cache.has(src)) {
                 img.src = src;
             } else {
