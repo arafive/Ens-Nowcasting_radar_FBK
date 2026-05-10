@@ -2,6 +2,7 @@
 import sys
 import pickle
 import os
+os.chdir('/media/daniele/Daniele2TB/repo/Ens-Nowcasting_radar_FBK')
 
 import locale
 locale.setlocale(locale.LC_TIME, 'it_IT.UTF-8')
@@ -16,9 +17,6 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 from datetime import timedelta
-os.chdir('/media/daniele/Daniele2TB/repo/Ens-Nowcasting_radar_FBK/irene')
-from irene.convgru_ensemble import RadarLightningModel
-os.chdir('/media/daniele/Daniele2TB/repo/Ens-Nowcasting_radar_FBK')
 
 
 def f_printa_tempo_trascorso(t_inizio, t_fine, nota=False):
@@ -70,18 +68,26 @@ states = cfeature.NaturalEarthFeature(
     facecolor='none'
 )
 
-# TODO Aggiungi il bottone "Ultima previsione"
-
-# FATTO Riduci la dimensione in kb delle immagini
-# FATTO Aggiungi "sono le ore UTC" nell'html
-# FATTO Salva le previsioni in un .pkl
+dict_proiezione = {
+    'PlateCarree': ccrs.PlateCarree(),
+    'Mercator': ccrs.Mercator(), # Quella che usa Francesco Silvestro per le immagini radar
+    'LambertConformal': ccrs.Orthographic(central_longitude=10, central_latitude=42),
+    'Orthographic': ccrs.Orthographic(central_longitude=10, central_latitude=42),
+    'EuroPP': ccrs.EuroPP(),
+    'Robinson': ccrs.Robinson(),
+    'NorthPolarStereo': ccrs.NorthPolarStereo(),
+    }
 
 # %%
 ### CONFIGURAZIONE
 ### Posso lanciare lo script anche passandogli una data: es. "2026-01-01 00:00:00"
 
-modello = RadarLightningModel.from_pretrained("it4lia/irene")
-coordinate = (7.2, 10.3, 43.4, 45.5)
+# modello = RadarLightningModel.from_pretrained("it4lia/irene")
+# pickle.dump(modello, open('./modello.pkl', 'wb'))
+modello = pickle.load(open('./modello.pkl', 'rb'))
+
+coordinate = (6.7, 10.4, 43.5, 45.1)
+nome_proiezione = 'Orthographic'
 numero_membri, ore_previsione, ore_osservato_per_predict = 10, 2, 1
 
 #################
@@ -92,7 +98,7 @@ if data_str:
 else:
     data_inizio_previsione_UTC = pd.Timestamp.today().tz_localize('Europe/Rome').tz_convert('UTC').floor('min').tz_convert(None)
 
-# data_inizio_previsione_UTC = pd.to_datetime('2026-05-06 15:30')
+# data_inizio_previsione_UTC = pd.to_datetime("2026-05-10 10:00:00")
 
 data_inizio_previsione_UTC = (data_inizio_previsione_UTC - pd.Timedelta(minutes=15)).tz_localize('UTC')
 data_inizio_previsione_LOC = data_inizio_previsione_UTC.tz_convert('Europe/Rome')
@@ -123,6 +129,7 @@ print()
 print(f'    {numero_membri=}')
 print(f'    {ore_previsione=}')
 print(f'    {ore_osservato_per_predict=}')
+print(f'    {nome_proiezione=}')
 print(f'    {cartella_plot=}')
 print()
 
@@ -183,7 +190,7 @@ print('\n    Stampo le previsioni...')
 dict_comuni = {'levels': livelli, 'extend': 'both', 'cmap': cmap, 'norm': norm, 'zorder': -1}
 
 for i, tempo_UTC in enumerate(tempi_previsti):
-    fig, axs = plt.subplots(2, 2, figsize=(9, 7), subplot_kw={'projection': ccrs.PlateCarree()}, gridspec_kw={'wspace': 0.01, 'hspace': 0.1})
+    fig, axs = plt.subplots(2, 2, figsize=(9, 7), subplot_kw={'projection': dict_proiezione[nome_proiezione]}, gridspec_kw={'wspace': 0.01, 'hspace': 0.1})
     
     tempo_LOCAL = tempo_UTC.tz_localize('UTC').tz_convert('Europe/Rome')
     
@@ -251,8 +258,9 @@ for i, tempo_UTC in enumerate(tempi_previsti):
     comando = f'magick {cartella_plot}/{nome_plot} -strip -colors 128 {cartella_plot}/{nome_plot}'
     os.system(comando)
     
-    # plt.show()
+    plt.show()
     plt.close()
+    # sss
     
 che_ore_sono_LOC = pd.Timestamp.today().floor('s')
 che_ore_sono_UTC = che_ore_sono_LOC.tz_localize('Europe/Rome').tz_convert('UTC').tz_localize(None)

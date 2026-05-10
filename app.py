@@ -35,6 +35,12 @@ def trova_ultimo_run():
 
         try:
 
+            # deve contenere almeno un png
+            png_files = glob.glob(os.path.join(c, "*.png"))
+
+            if len(png_files) == 0:
+                continue
+
             rel = os.path.relpath(c, BASE_FOLDER)
 
             anno, mese, giorno, hhmm = rel.split(os.sep)
