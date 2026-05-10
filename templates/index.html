@@ -118,13 +118,12 @@
 
                 <input type="hidden" name="indice" value="{{ indice }}">
 
-
                 <button type="submit" name="action" value="load">
-                    Carica dalla prima
+                    Carica dalla prima (Enter)
                 </button>
 
                 <button type="submit" name="action" value="latest">
-                    Ultimo Run (work in progress)
+                    Ultimo Run
                 </button>
 
             </form>
@@ -165,9 +164,35 @@
         setInterval(aggiornaOraUTC, 1000);
 
         /* =========================
+           FORM BUTTONS
+        ========================= */
+        const form = document.getElementById("mainForm");
+
+        const dateInput =
+            form.querySelector('input[name="date"]');
+
+        const latestBtn =
+            form.querySelector('button[value="latest"]');
+
+        const loadBtn =
+            form.querySelector('button[value="load"]');
+
+        /* ULTIMO RUN → disabilita required */
+        latestBtn.addEventListener("click", function () {
+
+            dateInput.removeAttribute("required");
+        });
+
+        /* LOAD → riabilita required */
+        loadBtn.addEventListener("click", function () {
+
+            dateInput.setAttribute("required", "required");
+        });
+
+        /* =========================
            IMMAGINI
         ========================= */
-        const imageList = {{immagini | tojson | safe }};
+        const imageList = {{ immagini | tojson | safe }};
         const maxIndex = imageList.length - 1;
 
         const img = document.getElementById("mainImg");
@@ -203,7 +228,7 @@
                 i++;
 
                 if (window.requestIdleCallback) {
-                    requestIdleCallback(step, {timeout: 200});
+                    requestIdleCallback(step, { timeout: 200 });
                 } else {
                     setTimeout(step, 10);
                 }

@@ -65,6 +65,7 @@ def trova_ultimo_run():
 
     return runs_validi[-1][0]
 
+
 @app.route("/", methods=["GET", "POST"])
 def index():
 
@@ -78,14 +79,36 @@ def index():
 
     if request.method == "POST":
 
-        data = request.form.get("date")
-        ora = request.form.get("hour")
-        minuto = request.form.get("minute")
+        action = request.form.get("action")
+
         indice = int(request.form.get("indice", 0))
 
-        if request.form.get("action") == "load":
+        # =========================================
+        # BOTTONE "ULTIMO RUN"
+        # =========================================
+        if action == "latest":
+
+            ultimo_run = trova_ultimo_run()
+
+            if ultimo_run:
+
+                data = ultimo_run.strftime("%Y-%m-%d")
+                ora = ultimo_run.strftime("%H")
+                minuto = ultimo_run.strftime("%M")
+
+        else:
+
+            data = request.form.get("date")
+            ora = request.form.get("hour")
+            minuto = request.form.get("minute")
+
+        # se clicco "Carica dalla prima"
+        if action == "load":
             indice = 0
 
+        # =========================================
+        # CARICAMENTO IMMAGINI
+        # =========================================
         if data:
 
             anno, mese, giorno = data.split("-")
@@ -104,7 +127,6 @@ def index():
 
                 files = sorted(glob.glob(os.path.join(cartella, "*.png")))
 
-                # trasformo in path RELATIVI per Flask
                 urls = [
                     "/image/" + os.path.relpath(f, BASE_FOLDER).replace("\\", "/")
                     for f in files
@@ -120,7 +142,7 @@ def index():
 
     return render_template(
         "index.html",
-        immagini=urls, # URL, non filesystem
+        immagini=urls,
         immagine_corrente=immagine_corrente,
         indice=indice,
         data=data,
@@ -131,3 +153,4 @@ def index():
 
 if __name__ == "__main__":
     app.run(debug=True, port=5001)
+
