@@ -50,8 +50,8 @@ def f_printa_tempo_trascorso(t_inizio, t_fine, nota=False):
         msg = f'{nota}: {msg}'
 
     print(msg)
-    
-    
+
+
 livelli = [0.2, 0.5, 1, 2, 3, 5, 7, 10, 15, 20, 25, 35, 45, 60, 75, 90, 120, 150, 180, 210]
 labels = [str(x) for x in [0.2, 0.5, 1, 2, 3, 5, 7, 10, 15, 20, 25, 35, 45, 60, 75, 90, 120, 150, 180, 210]]
 colori = ['#ffffff', '#e0ebff', '#b5c9ff', '#8eb2ff', '#7f96ff', '#6370f7', '#009f1e', '#3cbc3d', '#b9f96e', '#fff914', '#fac81e', '#eb9628', '#fa3c3c', '#cd005a', '#b400b4', '#9600c8', '#a064dc', '#be8cc8', '#e1afc3', '#e1c8be', '#f0dce1']
@@ -205,6 +205,7 @@ _SHAPE_CACHE = {x: None for x in nomi_shapefile}
 for p, shp in zip(nomi_shapefile, lista_percorsi_shapefile):
     _SHAPE_CACHE[p] = list(Reader(shp).geometries())
 
+
 def add(ax, geom, lw):
     feat = ShapelyFeature(
         geom,
@@ -214,6 +215,7 @@ def add(ax, geom, lw):
         lw=lw
     )
     ax.add_feature(feat, zorder=0)
+
 
 def f_crea_plot(args):
     
@@ -226,17 +228,26 @@ def f_crea_plot(args):
     
     datasets = [args_ds_obs, args_media, args_perc80, args_massimo]
     titoli = ["Osservato", f"Media su {numero_membri} membri", "80° percentile", "Massimo"]
-    titolo_UTC = f"Previsto: {tempo_UTC.strftime('%d %B %Y %H:%M')} UTC"
+    titolo_UTC = f"Previsto: {tempo_UTC.strftime('%d %B %Y %H:%M')} UTC    "
     titolo_LOC = f"Previsto: {tempo_LOCAL.strftime('%d %B %Y %H:%M')} locale"
     
     for ax, data, titolo in zip(axs.flat, datasets, titoli):
         
-        cf = ax.contourf(ds_pred.x, ds_pred.y, data, transform=ds_proj, levels=livelli, extend='both', **dict_comuni)
-        # ax.contour(ds_pred.x, ds_pred.y, data, transform=ds_proj, levels=livelli, colors='black', linewidths=0.15, zorder=dict_comuni['zorder'])
+        if titolo != 'Osservato':
+            cf = ax.contourf(ds_pred.x, ds_pred.y, data, transform=ds_proj, levels=livelli, extend='both', **dict_comuni)
+            # ax.contour(ds_pred.x, ds_pred.y, data, transform=ds_proj, levels=livelli, colors='black', linewidths=0.15, zorder=dict_comuni['zorder'])
+        else:
+            is_all_nan = np.isnan(data).all()
+            if is_all_nan:
+                lon_min, lon_max, lat_min, lat_max = coordinate
+                ax.fill([lon_min, lon_max, lon_max, lon_min], [lat_min, lat_min, lat_max, lat_max], color='darkgrey', transform=ccrs.PlateCarree(), zorder=dict_comuni['zorder'])
+            else:
+                cf = ax.contourf(ds_pred.x, ds_pred.y, data, transform=ds_proj, levels=livelli, extend='both', **dict_comuni)
+                # ax.contour(ds_pred.x, ds_pred.y, data, transform=ds_proj, levels=livelli, colors='black', linewidths=0.15, zorder=dict_comuni['zorder'])
 
         ax.set_extent(coordinate, crs=ccrs.PlateCarree())
         
-        ax.coastlines(linewidth=0.5); ax.add_feature(cfeature.BORDERS, linewidth=0.7); ax.add_feature(states, linewidth=0.1)
+        # ax.coastlines(linewidth=0.5); ax.add_feature(cfeature.BORDERS, linewidth=0.7); ax.add_feature(states, linewidth=0.1)
         add(ax, _SHAPE_CACHE['ita_confini'], 0.4); add(ax, _SHAPE_CACHE['fra_confini'], 0.4)
         add(ax, _SHAPE_CACHE['ita_regioni'], 0.2); add(ax, _SHAPE_CACHE['zone'], 0.2)
         # add(ax, _SHAPE_CACHE['comprensori'], 0.1)

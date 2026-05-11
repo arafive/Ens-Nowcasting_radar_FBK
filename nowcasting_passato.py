@@ -41,7 +41,7 @@ for i, j in enumerate(lista_file_forecast_vecchi, 1):
     print(f'{i} {j}')
 
 print()
-
+# ss
 # Ne faccio 3 alla volta, tanto lo metto in crontab ogni 5/10 minuti
 for i in lista_file_forecast_vecchi[:3]:
     anno = i.split('/')[2]

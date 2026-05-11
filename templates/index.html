@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Nowcasting Fotonico</title>
+    <title>IRENE</title>
 
     <style>
         html,
@@ -32,6 +32,7 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+            height: 100vh;
         }
 
         h2 {
@@ -78,6 +79,7 @@
             display: flex;
             flex-direction: column;
             gap: 16px;
+            flex: 1;
         }
 
         .time-buttons {
@@ -98,6 +100,28 @@
             width: 100%;
             box-sizing: border-box;
         }
+
+        .footer-link {
+            margin-top: 0px;
+            text-align: left;
+            font-size: 16px;
+        }
+
+        .footer-link a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+
+        .footer-link a:hover {
+            text-decoration: underline;
+        }
+
+        .footer-coffee {
+            font-size: 14px;
+            text-align: left;
+            color: #888;
+            line-height: 1.3;
+        }
     </style>
 
 </head>
@@ -109,7 +133,8 @@
         <!-- SIDEBAR -->
         <div class="controls-panel">
 
-            <h2>Ensemble Nowcasting Radar ARPAL</h2>
+            <h2>IRENE</h2>
+            <h2>Italian Radar Ensemble Nowcasting Experiment</h2>
 
             {% set current_time = time %}
             {% set ora = current_time.split(':')[0] %}
@@ -137,11 +162,11 @@
                 <div class="time-buttons">
 
                     <button type="button" id="prevTime">
-                        ◀ Indietro
+                        Indietro (Ctrl ←)
                     </button>
 
                     <button type="button" id="nextTime">
-                        Avanti ▶
+                        Avanti (Ctrl →)
                     </button>
 
                 </div>
@@ -149,29 +174,46 @@
                 <input type="hidden" name="indice" value="{{ indice }}">
 
                 <button type="submit" name="action" value="load">
-                    Carica dalla prima (Enter)
+                    Ricarica (Enter)
                 </button>
 
                 <button type="submit" name="action" value="latest">
-                    Ultimo Run
+                    Ultimo Run (Space)
                 </button>
 
                 <input type="hidden" name="action_hidden">
 
+                IRENE è una rete ConvGRU (Convolutional Gated Recurrent Units) encoder-decoder per la previsione della
+                precipitazione a breve termine usando immagini radar. Il modello genera previsioni probabilistiche,
+                producendo scenari multipli da una singola sequenza di dati in input. Maggiori dettagli nei link qui
+                sotto.
+
                 <div class="footer-link">
                     <a href="https://arcodatahub.com/datasets/datasets/italian-radar-dpc-sri.zarr/" target="_blank">
-                        Dati SRI-DPC usati per il predict
+                        Dati SRI-DPC
                     </a>
                 </div>
 
 
                 <div class="footer-link">
                     <a href="https://huggingface.co/it4lia" target="_blank">
-                        Repository "Irene"
+                        Repository It4lia
+                    </a>
+                </div>
+
+
+                <div class="footer-link">
+                    <a href="https://github.com/DSIP-FBK/ConvGRU-Ensemble" target="_blank">
+                        Repository di Gabriele Franch
                     </a>
                 </div>
 
             </form>
+            <!-- <div style="flex: 1;"></div> -->
+
+            <div class="footer-coffee">
+                Offri a Daniele C. un caffè ☕, magari non quello del bar...
+            </div>
 
         </div>
 
@@ -263,6 +305,36 @@
         ========================= */
         document.addEventListener("keydown", function (event) {
 
+            if (event.code === "Space") {
+                event.preventDefault();
+
+                const latestBtn = form.querySelector('button[value="latest"]');
+                if (latestBtn) {
+                    latestBtn.click();
+                }
+
+                return;
+            }
+
+            /* =========================
+               CTRL + FRECCE = TEMPO
+            ========================= */
+            if (event.ctrlKey && event.key === "ArrowRight") {
+                event.preventDefault();
+                shiftTime(1);
+                return;
+            }
+
+            if (event.ctrlKey && event.key === "ArrowLeft") {
+                event.preventDefault();
+                shiftTime(-1);
+                return;
+            }
+
+            /* =========================
+               FRECCE = IMMAGINI
+            ========================= */
+
             if (event.key === "Enter") {
 
                 event.preventDefault();
@@ -280,9 +352,11 @@
 
             if (event.key === "ArrowRight") {
                 i++;
-            } else if (event.key === "ArrowLeft") {
+            }
+            else if (event.key === "ArrowLeft") {
                 i--;
-            } else {
+            }
+            else {
                 return;
             }
 

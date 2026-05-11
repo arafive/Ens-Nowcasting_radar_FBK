@@ -9,7 +9,9 @@ cartella_forecast = './plot'
 python = '~/Scrivania/daniele/ambiente_daniele/dani/bin/python'
 os.chdir('/home/cfmi.arpal.org/daniele.carnevale/Scrivania/Ens-Nowcasting_radar_FBK')
 
-lista_tempi = pd.date_range('2025-09-01 15:00:00', '2025-09-02 02:00:00', freq='5min')
+lista_tempi = pd.date_range('2025-09-01 17:00:00', '2025-09-02 02:00:00', freq='15min')
+# lista_tempi = pd.date_range('2025-09-22 02:00:00', '2025-09-22 05:00:00', freq='15min')
+# lista_tempi = pd.date_range('2025-05-22 10:00:00', '2025-05-22 12:00:00', freq='15min')
 
 for tempo in lista_tempi:
     

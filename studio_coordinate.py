@@ -1,6 +1,7 @@
 
 import os
 import xarray as xr
+import numpy as np
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
@@ -39,7 +40,7 @@ states = cfeature.NaturalEarthFeature(
 username, access_key, dataset = "Daniele_Carnevale", "15fcff78d4194bc4beacda6173861e6d", "italian-radar-dpc-sri.zarr"
 dataset_url = f"https://{username}:{access_key}@api.arcodatahub.com/S3/{dataset}"
 
-ds = xr.open_dataset(dataset_url, engine="zarr").sel(time=slice('2025-09-01 18:00:00', '2025-09-02 02:00:00'))
+ds = xr.open_dataset(dataset_url, engine="zarr").sel(time=slice('2026-05-11 10:00:00', '2026-05-11 20:00:00'))
 
 dict_proiezione = {
     'PlateCarree': ccrs.PlateCarree(),
@@ -58,6 +59,7 @@ ds_proj = ccrs.TransverseMercator(
         scale_factor=ds.crs.attrs['scale_factor_at_central_meridian']
         )
 
+# %%
 # --------------------
 
 livelli = [0.2, 0.5, 1, 2, 3, 5, 7, 10, 15, 20, 25, 35, 45, 60, 75, 90, 120, 150, 180, 210]
@@ -68,24 +70,32 @@ cmap = mcolors.ListedColormap(colori[1:-1])
 cmap.set_under(colori[0])
 cmap.set_over(colori[-1])
 norm = mcolors.BoundaryNorm(livelli, cmap.N)
+dict_comuni = {'cmap': cmap, 'norm': norm, 'zorder': -1}
 
-fig, ax = plt.subplots(figsize=(9, 9), subplot_kw={'projection': dict_proiezione[nome_proiezione]})
-
-ax.set_extent(coordinate, crs=ccrs.PlateCarree())
-
-# ax.coastlines(linewidth=0.5); ax.add_feature(states, linewidth=0.2); ax.add_feature(cfeature.BORDERS, linewidth=0.4)
-f_shapefile(ax, True, True) # È troppo lento
-
-pcm = ax.pcolormesh(
-    ds.x,
-    ds.y,
-    ds.RR.isel(time=0),
-    transform=ds_proj,
-    cmap=cmap,
-    norm=norm,
-    zorder=-1
-)
-
-plt.title(f'{coordinate=}, {nome_proiezione=}', loc='left', fontsize=9)
-plt.show()
-plt.close()
+for i in range(100, 110):
+    fig, ax = plt.subplots(figsize=(9, 9), subplot_kw={'projection': dict_proiezione[nome_proiezione]})
+    
+    ax.set_extent(coordinate, crs=ccrs.PlateCarree())
+    
+    ax.coastlines(linewidth=0.5); ax.add_feature(states, linewidth=0.2); ax.add_feature(cfeature.BORDERS, linewidth=0.4)
+    # f_shapefile(ax, True, True) # È troppo lento
+    
+    is_all_nan = np.isnan(ds.RR.isel(time=i).values).all()
+    if is_all_nan:
+        lon_min, lon_max, lat_min, lat_max = coordinate
+    
+        ax.fill(
+            [lon_min, lon_max, lon_max, lon_min],
+            [lat_min, lat_min, lat_max, lat_max],
+            color='darkgrey',
+            transform=ccrs.PlateCarree(),
+            zorder=-10
+        )
+        
+    else:
+        # cf = ax.contourf(ds.x, ds.y, ds.RR.isel(time=i), transform=ds_proj, extend='both', **dict_comuni)
+        pcm = ax.pcolormesh(ds.x, ds.y, ds.RR.isel(time=i), transform=ds_proj, **dict_comuni)
+    
+    plt.title(f'{coordinate=}, {nome_proiezione=}', loc='left', fontsize=9)
+    plt.show()
+    plt.close()
