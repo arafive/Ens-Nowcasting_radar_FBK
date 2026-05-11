@@ -70,8 +70,33 @@
             width: 100%;
             height: 100%;
             object-fit: contain;
-            transform: scaleX(1.1);
+            transform: scaleX(1.05);
             transform-origin: center;
+        }
+
+        #mainForm {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .time-buttons {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            margin-top: 4px;
+        }
+
+        .time-buttons button {
+            flex: 1;
+        }
+
+        button,
+        select,
+        input {
+            padding: 8px;
+            width: 100%;
+            box-sizing: border-box;
         }
     </style>
 
@@ -98,7 +123,7 @@
 
                 <input type="date" name="date" value="{{ data }}" required>
 
-                <select name="time">
+                <select name="time" id="timeSelect">
                     {% for h in range(24) %}
                     {% for m in range(0, 60, 15) %}
                     {% set val = "%02d:%02d" % (h, m) %}
@@ -109,6 +134,18 @@
                     {% endfor %}
                 </select>
 
+                <div class="time-buttons">
+
+                    <button type="button" id="prevTime">
+                        ◀ Indietro
+                    </button>
+
+                    <button type="button" id="nextTime">
+                        Avanti ▶
+                    </button>
+
+                </div>
+
                 <input type="hidden" name="indice" value="{{ indice }}">
 
                 <button type="submit" name="action" value="load">
@@ -118,6 +155,21 @@
                 <button type="submit" name="action" value="latest">
                     Ultimo Run
                 </button>
+
+                <input type="hidden" name="action_hidden">
+
+                <div class="footer-link">
+                    <a href="https://arcodatahub.com/datasets/datasets/italian-radar-dpc-sri.zarr/" target="_blank">
+                        Dati SRI-DPC usati per il predict
+                    </a>
+                </div>
+
+
+                <div class="footer-link">
+                    <a href="https://huggingface.co/it4lia" target="_blank">
+                        Repository "Irene"
+                    </a>
+                </div>
 
             </form>
 
@@ -247,6 +299,82 @@
             }
 
             img.dataset.index = i;
+        });
+
+        /* =========================
+        AUTO LOAD ON TIME CHANGE
+        ========================= */
+
+        const timeSelect = document.getElementById("timeSelect");
+
+        function submitLoad() {
+
+            const inputIndice =
+                form.querySelector('input[name="indice"]');
+
+            if (inputIndice) {
+                inputIndice.value = 0;
+            }
+
+            let hiddenAction =
+                form.querySelector('input[name="action_hidden"]');
+
+            if (!hiddenAction) {
+
+                hiddenAction = document.createElement("input");
+                hiddenAction.type = "hidden";
+                hiddenAction.name = "action_hidden";
+
+                form.appendChild(hiddenAction);
+            }
+
+            hiddenAction.value = "load";
+
+            form.submit();
+        }
+
+        /* =========================
+           AUTOLOAD ON SELECT
+        ========================= */
+        timeSelect.addEventListener("change", function () {
+            submitLoad();
+        });
+
+        /* =========================
+           PREV / NEXT TIME
+        ========================= */
+
+        const prevBtn = document.getElementById("prevTime");
+        const nextBtn = document.getElementById("nextTime");
+
+        function shiftTime(step) {
+
+            let index = timeSelect.selectedIndex;
+
+            index += step;
+
+            const total = timeSelect.options.length;
+
+            // ciclo continuo 23:45 -> 00:00
+            if (index < 0) {
+                index = total - 1;
+            }
+
+            if (index >= total) {
+                index = 0;
+            }
+
+            timeSelect.selectedIndex = index;
+
+            submitLoad();
+        }
+
+        prevBtn.addEventListener("click", function () {
+            shiftTime(-1);
+        });
+
+        nextBtn.addEventListener("click", function () {
+            shiftTime(1);
         });
 
     </script>

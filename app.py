@@ -68,17 +68,27 @@ def index():
     data = ""
     time = "00:00"
 
+    # =========================================
+    # APERTURA PAGINA -> ULTIMO RUN
+    # =========================================
+    if request.method == "GET":
+
+        ultimo_run = trova_ultimo_run()
+
+        if ultimo_run:
+            data = ultimo_run.strftime("%Y-%m-%d")
+            time = ultimo_run.strftime("%H:%M")
+
+    # =========================================
+    # POST
+    # =========================================
     if request.method == "POST":
 
-        action = request.form.get("action")
+        action = request.form.get("action") or request.form.get("action_hidden")
         indice = int(request.form.get("indice", 0))
 
-        # valore dal form (può essere None)
         time_form = request.form.get("time")
 
-        # =========================================
-        # ULTIMO RUN
-        # =========================================
         if action == "latest":
 
             ultimo_run = trova_ultimo_run()
@@ -89,10 +99,7 @@ def index():
 
             if not time:
                 time = request.form.get("time", "00:00")
-                
-        # =========================================
-        # LOAD / DEFAULT
-        # =========================================
+
         elif action == "load":
 
             data = request.form.get("date")
@@ -102,9 +109,6 @@ def index():
 
             indice = 0
 
-        # =========================================
-        # CASO NORMALE
-        # =========================================
         else:
 
             data = request.form.get("date")
