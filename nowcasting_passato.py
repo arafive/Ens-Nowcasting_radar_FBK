@@ -42,8 +42,8 @@ for i, j in enumerate(lista_file_forecast_vecchi, 1):
 
 print()
 # ss
-# Ne faccio 3 alla volta, tanto lo metto in crontab ogni 5/10 minuti
-for i in lista_file_forecast_vecchi[:3]:
+# Ne faccio 1 alla volta, tanto lo metto in crontab ogni 5/10 minuti
+for i in lista_file_forecast_vecchi[:1]:
     anno = i.split('/')[2]
     mese = i.split('/')[3]
     giorno = i.split('/')[4]
