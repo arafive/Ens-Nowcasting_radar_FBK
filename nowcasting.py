@@ -96,6 +96,7 @@ data_str = sys.argv[1] if len(sys.argv) > 1 else None
 if data_str:
     data_inizio_previsione_UTC = pd.Timestamp(data_str)
 else:
+    # data_inizio_previsione_UTC = pd.Timestamp.today().floor('min') # per la meteo-dev
     data_inizio_previsione_UTC = pd.Timestamp.today().tz_localize('Europe/Rome').tz_convert('UTC').floor('min').tz_convert(None)
 
 # data_inizio_previsione_UTC = pd.to_datetime("2026-05-10 10:15:00")
@@ -123,6 +124,11 @@ ds_proj = ccrs.TransverseMercator(
 )
 
 #################
+
+### per la meteo-dev
+# che_ore_sono_UTC = pd.Timestamp.today().floor('s')
+# che_ore_sono_LOC = che_ore_sono_UTC.tz_localize('UTC').tz_convert('Europe/Rome').tz_localize(None)
+
 
 che_ore_sono_LOC = pd.Timestamp.today().floor('s')
 che_ore_sono_UTC = che_ore_sono_LOC.tz_localize('Europe/Rome').tz_convert('UTC').tz_localize(None)
@@ -155,10 +161,10 @@ print()
 """ La logica che c'è dietro il predict è questa
     Gli passo gli istanti dentro ds_pred.
     Es UTC. 2026-05-06 15:15:00, 2026-05-06 15:10:00, ... 2026-05-06 14:15:00. Gli ho passato in questo caso 1 ora
-    
+
     Il predict prevede {ore_previsione} ore, dove il primo istante previsto sarà il 2026-05-06 15:15:00 + 5min
     Es UTC. 2026-05-06 15:20:00, 2026-05-06 15:25:00 ... che si troveranno nella cartella 2026/05/06/1515
-    
+
     Possiamo dire che 2026/05/06/1515 è la cartella col nome dell'analisi
 
 """
@@ -218,21 +224,21 @@ def add(ax, geom, lw):
 
 
 def f_crea_plot(args):
-    
+
     tempo_UTC, args_ds_obs, args_media, args_perc80, args_massimo = args
-    
+
     dict_comuni = {'cmap': cmap, 'norm': norm, 'zorder': -1}
     fig, axs = plt.subplots(2, 2, figsize=(9, 7), subplot_kw={'projection': dict_proiezione[nome_proiezione]}, gridspec_kw={'wspace': 0.01, 'hspace': 0.1})
-    
+
     tempo_LOCAL = tempo_UTC.tz_localize('UTC').tz_convert('Europe/Rome')
-    
+
     datasets = [args_ds_obs, args_media, args_perc80, args_massimo]
     titoli = ["Osservato", f"Media su {numero_membri} membri", "80° percentile", "Massimo"]
     titolo_UTC = f"Previsto: {tempo_UTC.strftime('%d %B %Y %H:%M')} UTC"
     titolo_LOC = f"Previsto: {tempo_LOCAL.strftime('%d %B %Y %H:%M')} locale"
-    
+
     for ax, data, titolo in zip(axs.flat, datasets, titoli):
-        
+
         if titolo != 'Osservato':
             cf = ax.contourf(ds_pred.x, ds_pred.y, data, transform=ds_proj, levels=livelli, extend='both', **dict_comuni)
             # ax.contour(ds_pred.x, ds_pred.y, data, transform=ds_proj, levels=livelli, colors='black', linewidths=0.15, zorder=dict_comuni['zorder'])
@@ -246,12 +252,12 @@ def f_crea_plot(args):
                 # ax.contour(ds_pred.x, ds_pred.y, data, transform=ds_proj, levels=livelli, colors='black', linewidths=0.15, zorder=dict_comuni['zorder'])
 
         ax.set_extent(coordinate, crs=ccrs.PlateCarree())
-        
+
         # ax.coastlines(linewidth=0.5); ax.add_feature(cfeature.BORDERS, linewidth=0.7); ax.add_feature(states, linewidth=0.1)
         add(ax, _SHAPE_CACHE['ita_confini'], 0.4); add(ax, _SHAPE_CACHE['fra_confini'], 0.4)
         add(ax, _SHAPE_CACHE['ita_regioni'], 0.2); add(ax, _SHAPE_CACHE['zone'], 0.2)
         # add(ax, _SHAPE_CACHE['comprensori'], 0.1)
-        
+
         ax.set_title(titolo, loc='left', fontsize=9)
         if titolo == 'Osservato':
             # ax.set_title(titolo_UTC, loc='right', fontsize=9)
@@ -259,30 +265,30 @@ def f_crea_plot(args):
         if titolo == f"Media su {numero_membri} membri":
             # ax.set_title(titolo_LOC, loc='right', fontsize=9)
             ax.set_title(titolo_UTC, loc='right', fontsize=9)
-            
+
     fig.subplots_adjust(left=0.01, right=0.99, bottom=0.06, top=0.90, wspace=0.01, hspace=0.01)
-    
+
     # extend='both' non serve se uso contourf
     cbar = fig.colorbar(cf, ax=axs.ravel().tolist(), orientation='horizontal', ticks=livelli, pad=0.01, fraction=0.025, aspect=50)
-    
+
     cbar.set_ticklabels(labels)
     cbar.ax.tick_params(labelsize=8)
     cbar.ax.text(1.03, -0.96, "mm/h", transform=cbar.ax.transAxes, va='center', ha='left', fontsize=9)
-    
+
     nome_plot = f"prev_{tempo_UTC.strftime('%Y-%m-%d_%H%M')}.png"
     plt.savefig(f"{cartella_plot}/{nome_plot}", dpi=200, bbox_inches='tight', pad_inches=0.02)
-    
+
     ### Riduco la dimensione in kB
     ### !!! convert su Fedora/Rocky
     # comando = f'magick {cartella_plot}/{nome_plot} -strip -colors 128 {cartella_plot}/{nome_plot}'
     comando = f'magick {cartella_plot}/{nome_plot} -strip -colors 64 PNG8:{cartella_plot}/{nome_plot}'
     os.system(comando)
-    
+
     # plt.show()
     plt.close(fig)
-    
+
     print(f'    {nome_plot}')
-    
+
     return nome_plot
 
 
