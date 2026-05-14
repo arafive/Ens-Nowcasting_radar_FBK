@@ -228,7 +228,7 @@ def f_crea_plot(args):
     
     datasets = [args_ds_obs, args_media, args_perc80, args_massimo]
     titoli = ["Osservato", f"Media su {numero_membri} membri", "80° percentile", "Massimo"]
-    titolo_UTC = f"Previsto: {tempo_UTC.strftime('%d %B %Y %H:%M')} UTC    "
+    titolo_UTC = f"Previsto: {tempo_UTC.strftime('%d %B %Y %H:%M')} UTC"
     titolo_LOC = f"Previsto: {tempo_LOCAL.strftime('%d %B %Y %H:%M')} locale"
     
     for ax, data, titolo in zip(axs.flat, datasets, titoli):
@@ -254,9 +254,11 @@ def f_crea_plot(args):
         
         ax.set_title(titolo, loc='left', fontsize=9)
         if titolo == 'Osservato':
-            ax.set_title(titolo_UTC, loc='right', fontsize=9)
+            # ax.set_title(titolo_UTC, loc='right', fontsize=9)
+            pass
         if titolo == f"Media su {numero_membri} membri":
-            ax.set_title(titolo_LOC, loc='right', fontsize=9)
+            # ax.set_title(titolo_LOC, loc='right', fontsize=9)
+            ax.set_title(titolo_UTC, loc='right', fontsize=9)
             
     fig.subplots_adjust(left=0.01, right=0.99, bottom=0.06, top=0.90, wspace=0.01, hspace=0.01)
     
