@@ -25,7 +25,7 @@ adesso = time.time()
 soglia = adesso - 3 * 60 * 60
 print('\n')
 
-lista_file_forecast = glob.glob('./plot/**/forecast*', recursive=True)
+lista_file_forecast = glob.glob(f'{cartella_forecast}/**/forecast*', recursive=True)
 lista_tempi = [os.path.getmtime(x) for x in lista_file_forecast]
 lista_file_forecast_vecchi = [x for x, y in zip(lista_file_forecast, lista_tempi) if y < soglia]
 
@@ -44,10 +44,10 @@ print()
 # ss
 # Ne faccio 1 alla volta, tanto lo metto in crontab ogni 5/10 minuti
 for i in lista_file_forecast_vecchi[:1]:
-    anno = i.split('/')[2]
-    mese = i.split('/')[3]
-    giorno = i.split('/')[4]
-    ora_minuti = i.split('/')[5]
+    anno = i.split('/')[-5]
+    mese = i.split('/')[-4]
+    giorno = i.split('/')[-3]
+    ora_minuti = i.split('/')[-2]
     
     tempo = pd.to_datetime(f'{anno}-{mese}-{giorno} {ora_minuti[:2]}:{ora_minuti[2:]}:00') + pd.Timedelta(minutes=15)
     
